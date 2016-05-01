@@ -1,13 +1,31 @@
 var robinhood = require('robinhood');
 var commandLineArgs = require('command-line-args'); // https://www.npmjs.com/package/command-line-args
 
+//command-line variables
+var cli = commandLineArgs([
+  { name: 'username', alias: 'u', type: String },
+  { name: 'password', alias: 'p', type: String },	
+  { name: 'action', alias: 'a', type: String },
+  { name: 'symbol', alias: 's', type: String },
+  { name: 'stop-loss-percent', alias: 'l', type: Number },
+  { name: 'limit-percent', alias: 'h', type: Number }
+])
+
+var cli_options = cli.parse();
 
 //variables
 
 var R
-var BP
-var LTP
-var INSTRUMENT
+var FT = {
+      buying_power : null,
+      instrument : {
+      	symbol : null,
+      	url : null,
+      },
+      buy_quantity : null,
+      buy_price : null
+    }
+
 var prep_options
 
 function login () {
@@ -64,53 +82,51 @@ function getBuyingPower () {
       if (err) {
         reject(err)
       } else {
-      	//console.log(body.results)
-      	BP = body.results[0]['buying_power']
-        resolve(body.results[0]['buying_power'])
+      	FT.buying_power = body.results[0]['buying_power']
+        resolve(FT)
       }
     })
   )
 }
 
-function getInstrumentURI () {
+function getInstrument () {
   return new Promise((resolve, reject) =>
     R.instruments(cli_options['symbol'], (err, res, body) => {
       if (err) {
         reject(err)
       } else {
-      	INSTRUMENT = body.results[0].url
-        console.log(body.results[0].url)
-        resolve(body.results[0].url)
+      	FT.instrument.url = body.results[0].url
+      	FT.instrument.symbol = cli_options['symbol']
+        console.log(FT.instrument.url + ' ' + FT.instrument.symbol)
+        resolve(FT)
       }
     })
   )
 }
 
-function getDrinkSize (buying_power) {
+function getDrinkSize (FT) {
   return new Promise((resolve, reject) =>
     R.quote_data(cli_options['symbol'], (err, res, body) => {
       if (err) {
         reject(err)
       } else {
-      	//console.log(body.results[0]['buying_power'])
-        //resolve(body.results[0]['buying_power'])
-        LTP = parseFloat(body.results[0]['last_trade_price'])
-        var stb = buying_power / LTP
-        var wholestb = Math.floor(stb)
-        console.log('Math.floor(' + buying_power + '/' + body.results[0]['last_trade_price'] + '=' + stb + ')=' + wholestb)
-        resolve(wholestb)
+        FT.buy_price = parseFloat(body.results[0]['last_trade_price'])
+        var stb = FT.buying_power / FT.buy_price
+        FT.buy_quantity = Math.floor(stb)
+        console.log('Math.floor(' + FT.buying_power + '/' + body.results[0]['last_trade_price'] + '=' + stb + ')=' + FT.buy_quantity)
+        resolve(FT)
       }
     })
   )
 }
 
-function prepBuyOrder(drink_size) {
+function prepBuyOrder(FT) {
 	var buy_options = {
-	    bid_price: LTP,
-	    quantity: drink_size,
+	    bid_price: FT.buy_price,
+	    quantity: FT.buy_quantity,
 	    instrument: {
-	        url: INSTRUMENT,
-	        symbol: cli_options['symbol']
+	        url: FT.instrument.url,
+	        symbol: FT.instrument.symbol
 	     }
 	    // },
 	    // // Optional:
@@ -141,35 +157,23 @@ function showFinalResults (buy_options) {
 
 console.log("friartuck wakes up");
 
-var cli = commandLineArgs([
-  { name: 'username', alias: 'u', type: String },
-  { name: 'password', alias: 'p', type: String },	
-  { name: 'action', alias: 'a', type: String },
-  { name: 'symbol', alias: 's', type: String },
-  { name: 'stop-loss-percent', alias: 'l', type: Number },
-  { name: 'limit-percent', alias: 'h', type: Number }
-])
-
-var cli_options = cli.parse();
 
 //console.log(cli.getUsage());
 // login()
 // .then(getBuyingPower)
-// .then(console.log("There's this much ale to drink: " + BP))
 // .catch(err => { console.error(err); process.exit(1) })
 //console.log(cli_options['action']);
 
 
 
-// login()
-// .then(getInstrumentURI)
-// .then(getBuyingPower)
-// .then(getDrinkSize)
-// .then(prepBuyOrder)
-// //.then(postBuyOrder)
-// .then(showFinalResults)
 login()
-.then(getOrders)
-//.then(console.log("There's this much ale to drink: " + BP))
+.then(getInstrument)
+.then(getBuyingPower)
+.then(getDrinkSize)
+.then(prepBuyOrder)
+//.then(postBuyOrder)
+.then(showFinalResults)
+//login()
+//.then(getOrders)
 
 
