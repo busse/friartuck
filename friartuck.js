@@ -142,9 +142,42 @@ function prepBuyOrder(FT) {
 	return buy_options
 }
 
+function prepStopLossOrder(FT) {
+	var tmp_stop_price = (FT.buy_price - (FT.buy_price * (cli_options['stop-loss-percent']*0.01)))
+	var sell_options = {
+	    stop_price: tmp_stop_price,
+	    quantity: FT.buy_quantity,
+	    trigger: 'stop',
+	    time: 'gtc',
+	    instrument: {
+	        url: FT.instrument.url,
+	        symbol: FT.instrument.symbol
+	     }
+	    // },
+	    // // Optional:
+	    // 'trigger': String, // Defaults to "gfd" (Good For Day)
+	    // 'time': String,    // Defaults to "immediate"
+	    // 'type': String     // Defaults to "market"
+	}
+	return sell_options
+}
+
 function postBuyOrder (buy_options) {
   return new Promise((resolve, reject) =>
     R.place_buy_order(buy_options, (err, res, body) => {
+      if (err) {
+        reject(err)
+      } else {
+        console.log(body.results)
+        resolve(body.results)
+      }
+    })
+  )
+}
+
+function postSellOrder (sell_options) {
+  return new Promise((resolve, reject) =>
+    R.place_sell_order(sell_options, (err, res, body) => {
       if (err) {
         reject(err)
       } else {
@@ -171,14 +204,16 @@ console.log("friartuck wakes up");
 
 
 
-login()
-.then(getInstrument)
-.then(getBuyingPower)
-.then(getDrinkSize)
-.then(prepBuyOrder)
-//.then(postBuyOrder)
-.then(showFinalResults)
 // login()
-// .then(getOrders)
+// .then(getInstrument)
+// .then(getBuyingPower)
+// .then(getDrinkSize)
+// //.then(prepBuyOrder)
+// .then(prepStopLossOrder)
+// .then(postSellOrder)
+// //.then(postBuyOrder)
+// .then(showFinalResults)
+login()
+.then(getOrders)
 
 
