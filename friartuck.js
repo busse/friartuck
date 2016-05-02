@@ -6,6 +6,7 @@ var cli = commandLineArgs([
   { name: 'username', alias: 'u', type: String },
   { name: 'password', alias: 'p', type: String },	
   { name: 'action', alias: 'a', type: String },
+  { name: 'maxbudget', alias: 'm', type: Number },
   { name: 'symbol', alias: 's', type: String },
   { name: 'stop-loss-percent', alias: 'l', type: Number },
   { name: 'limit-percent', alias: 'h', type: Number }
@@ -82,7 +83,11 @@ function getBuyingPower () {
       if (err) {
         reject(err)
       } else {
-      	FT.buying_power = body.results[0]['buying_power']
+      	var tmp_buying_power = body.results[0]['buying_power']
+      	if (cli_options['maxbudget'] < tmp_buying_power) {
+      		var tmp_buying_power = cli_options['maxbudget']
+      	}
+      	FT.buying_power = tmp_buying_power
         resolve(FT)
       }
     })
@@ -173,7 +178,7 @@ login()
 .then(prepBuyOrder)
 //.then(postBuyOrder)
 .then(showFinalResults)
-//login()
-//.then(getOrders)
+// login()
+// .then(getOrders)
 
 
