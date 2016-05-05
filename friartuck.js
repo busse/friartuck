@@ -1,5 +1,6 @@
 var robinhood = require('robinhood');
 var commandLineArgs = require('command-line-args'); // https://www.npmjs.com/package/command-line-args
+var async 	= require('async');
 
 //command-line variables
 var cli = commandLineArgs([
@@ -77,6 +78,48 @@ function getAccounts () {
   )
 }
 
+function getPositionDetail (URIDetail) {
+  return new Promise((resolve, reject) =>
+    R.position_detail(URIDetail, (err, res, body) => {
+      if (err) {
+        reject(err)
+      } else {
+      	console.log(body.results);
+        resolve(body.results)
+      }
+    })
+  )
+}
+
+function getActivePositions () {
+  return new Promise((resolve, reject) =>
+    R.positions((err, res, body) => {
+      if (err) {
+        reject(err)
+      } else {
+      	console.log(body.results);
+    	var checkSymbols = [];
+		async.each(body.results, function(item,cb){
+			var tmpIndex = -1;
+			// day of purchase it may look like:
+			//   intraday_quantity: '2.0000',
+			if (item.shares_held_for_sells > 0)
+				// request instrument to get symbol, ex https://api.robinhood.com/instruments/3a47ca97-d5a2-4a55-9045-053a588894de/
+				checkSymbols.push({url: item.url, buy_price: item.average_buy_price});
+			cb();
+
+		}, function(err){
+			// console.log(JSON.stringify(checkSymbols));
+			// console.log(checkSymbols);
+		});
+
+        //resolve(body.results)
+        resolve(checkSymbols);
+      }
+    })
+  )
+}
+
 function getBuyingPower () {
   return new Promise((resolve, reject) =>
     R.accounts((err, res, body) => {
@@ -127,17 +170,17 @@ function getDrinkSize (FT) {
 
 function prepBuyOrder(FT) {
 	var buy_options = {
-	    bid_price: FT.buy_price,
+	    //bid_price: FT.buy_price,
 	    quantity: FT.buy_quantity,
 	    instrument: {
 	        url: FT.instrument.url,
 	        symbol: FT.instrument.symbol
-	     }
-	    // },
+	    // }
+	    },
 	    // // Optional:
-	    // 'trigger': String, // Defaults to "gfd" (Good For Day)
-	    // 'time': String,    // Defaults to "immediate"
-	    // 'type': String     // Defaults to "market"
+	    'trigger': 'gfd', // Defaults to "gfd" (Good For Day)
+	    'time': 'immediate',    // Defaults to "immediate"
+	    'type': 'market'     // Defaults to "market"
 	}
 	return buy_options
 }
@@ -213,7 +256,15 @@ console.log("friartuck wakes up");
 // .then(postSellOrder)
 // //.then(postBuyOrder)
 // .then(showFinalResults)
+// login()
+// .then(getOrders)
+
 login()
-.then(getOrders)
+.then(getActivePositions)
+.then(showFinalResults)
+
+// login()
+// .then(showFinalResults)
+
 
 
